@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="laser">
+
+    <xacro:macro name="laser_lidar_sensor" params="prefix:=laser sensor_name:=gpu_lidar topic:=lidar samples:=271 visualize:=true">
+        <gazebo reference="${prefix}_link">
+            <sensor type="gpu_lidar" name="${sensor_name}">
+                <gz_frame_id>${prefix}_link</gz_frame_id>
+                <topic>${topic}</topic>
+                <update_rate>20</update_rate>
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <samples>${samples}</samples>
+                            <resolution>1</resolution>
+                            <min_angle>-2.35619</min_angle>
+                            <max_angle>2.35619</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>1</samples>
+                            <resolution>0.01</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>0.08</min>
+                        <max>32.5</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                </ray>
+                <always_on>1</always_on>
+                <visualize>${visualize}</visualize>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="laser_lidar" params="prefix:=laser topic:=lidar samples:=271 visualize:=true">
+        <!-- Create laser reference frame -->
+        <link name="${prefix}_link">
+            <inertial>
+                <mass value="0.1" />
+                <origin xyz="0 0 0" />
+                <inertia ixx="0.01" ixy="0.0" ixz="0.0"
+                         iyy="0.01" iyz="0.0"
+                         izz="0.01" />
+            </inertial>
+
+            <visual>
+                <origin xyz=" 0 0 0 " rpy="0 0 0" />
+                <geometry>
+                    <cylinder length="0.05" radius="0.05"/>
+                </geometry>
+                <material name="black"><color rgba="0 0 0 0.95"/></material>
+            </visual>
+
+            <collision>
+                <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+                <geometry>
+                    <cylinder length="0.06" radius="0.05"/>
+                </geometry>
+            </collision>
+        </link>
+
+        <xacro:laser_lidar_sensor prefix="${prefix}" sensor_name="${prefix}_gpu_lidar" topic="${topic}" samples="${samples}" visualize="${visualize}" />
+    </xacro:macro>
+</robot>
