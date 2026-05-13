@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/rl_explore_env.sh"
 
 CAMERA_TOPIC="${RL_EXPLORE_GUI_CAMERA_TOPIC:-/rl_explore/gui/camera_image}"
-MAP_TOPIC="${RL_EXPLORE_GUI_MAP_TOPIC:-/rl_explore/gui/map_image}"
+MAP_TOPIC="${RL_EXPLORE_GUI_MAP_TOPIC:-/map}"
 
 echo "[rl_explore] Starting intent exploration GUI"
 echo "[rl_explore] camera_topic=${CAMERA_TOPIC}"

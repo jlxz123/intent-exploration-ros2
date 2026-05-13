@@ -132,7 +132,7 @@ open_terminal() {
 echo "[rl_explore] Launching map=${MAP_NAME}, device=${DEVICE}, policy_delay=${POLICY_DELAY}s, spawn_base_seed=${SPAWN_BASE_SEED}, spawn_eval_index=${SPAWN_EVAL_INDEX}, hand_intent=${WITH_HAND_INTENT}"
 open_terminal "RL Explore Gazebo" "${GAZEBO_SCRIPT}"
 if [[ "${WITH_HAND_INTENT}" == "1" ]]; then
-    open_terminal "RL Explore Policy" "${POLICY_SCRIPT}" "RL_EXPLORE_SHOW_CCRL_MAP_WINDOW=false"
+    open_terminal "RL Explore Policy" "${POLICY_SCRIPT}" "RL_EXPLORE_SHOW_CCRL_MAP_WINDOW=false RL_EXPLORE_MAP_IMAGE_TOPIC="
     open_terminal "RL Explore Hand Intent" "${HAND_INTENT_SCRIPT}" "RL_EXPLORE_HAND_SHOW_WINDOW=false RL_EXPLORE_HAND_GUI_IMAGE_TOPIC=/rl_explore/gui/camera_image"
     open_terminal "RL Explore Intent GUI" "${INTENT_GUI_SCRIPT}"
 else
