@@ -16,6 +16,8 @@ def generate_launch_description():
             DeclareLaunchArgument("spawn_base_seed", default_value="1"),
             DeclareLaunchArgument("spawn_eval_index", default_value="0"),
             DeclareLaunchArgument("debug_dump_dir", default_value=""),
+            DeclareLaunchArgument("show_ccrl_map_window", default_value="true"),
+            DeclareLaunchArgument("map_image_topic", default_value="/rl_explore/gui/map_image"),
             Node(
                 package="rl_explore_policy",
                 executable="policy_node",
@@ -44,7 +46,8 @@ def generate_launch_description():
                         "action_timeout": 20.0,
                         "post_action_pause": 0.03,
                         "debug_dump_dir": LaunchConfiguration("debug_dump_dir"),
-                        "show_ccrl_map_window": True,
+                        "show_ccrl_map_window": LaunchConfiguration("show_ccrl_map_window"),
+                        "map_image_topic": LaunchConfiguration("map_image_topic"),
                         "ccrl_map_window_refresh_hz": 2.0,
                         "ccrl_map_window_scale": 10,
                     }

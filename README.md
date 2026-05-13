@@ -36,6 +36,7 @@ Compared with `intent-exploration`, this repository adds the ROS-side simulation
 - Separate high-resolution lidar usage for SLAM / visualization.
 - Discrete waypoint execution of learned actions through ROS navigation logic.
 - Keyboard and hand-camera intent direction publishers.
+- A two-panel intent exploration GUI that combines the hand-camera view and the CCRL mapping view.
 - Project-local Linux launchers for one-click autonomous or human-intent runs.
 
 ## Important Geometry
@@ -88,6 +89,9 @@ Double-click `RL_Explore_Auto` to open two terminals:
 Double-click `RL_Explore_With_Hand_Intent` to open the same two terminals plus:
 
 - `RL Explore Hand Intent`: starts the camera-based hand intent publisher.
+- `RL Explore Intent GUI`: opens a two-panel GUI with the camera capture view and the CCRL mapping view.
+
+In hand-intent mode, the standalone hand-camera and CCRL map debug windows are disabled and replaced by the combined GUI. Gazebo, RViz, Cartographer, Nav2, and terminal windows still run normally.
 
 The launchers run:
 

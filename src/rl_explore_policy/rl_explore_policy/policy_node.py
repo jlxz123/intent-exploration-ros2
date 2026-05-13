@@ -13,7 +13,7 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.time import Time
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import Bool, Int32
 from tf2_ros import Buffer, TransformException, TransformListener
 import torch
@@ -33,6 +33,12 @@ def quaternion_to_yaw(q):
 
 def normalize_angle(angle):
     return (float(angle) + math.pi) % (2.0 * math.pi) - math.pi
+
+
+def parameter_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
 
 
 def yaw_to_quaternion(yaw):
@@ -127,6 +133,7 @@ class CcrlPolicyNode(Node):
         self.declare_parameter("show_ccrl_map_window", True)
         self.declare_parameter("ccrl_map_window_refresh_hz", 2.0)
         self.declare_parameter("ccrl_map_window_scale", 10)
+        self.declare_parameter("map_image_topic", "/rl_explore/gui/map_image")
         self.declare_parameter("action_mode", "argmax")
         self.declare_parameter("action_execution_mode", "nav2")
         self.declare_parameter("intent_topic", "/rl_explore/intent_direction")
@@ -174,9 +181,10 @@ class CcrlPolicyNode(Node):
         self.nav_action_name = str(self.get_parameter("nav_action_name").value)
         self.log_actions = bool(self.get_parameter("log_actions").value)
         self.debug_dump_dir = str(self.get_parameter("debug_dump_dir").value)
-        self.show_ccrl_map_window = bool(self.get_parameter("show_ccrl_map_window").value)
+        self.show_ccrl_map_window = parameter_to_bool(self.get_parameter("show_ccrl_map_window").value)
         self.ccrl_map_window_refresh_hz = float(self.get_parameter("ccrl_map_window_refresh_hz").value)
         self.ccrl_map_window_scale = int(self.get_parameter("ccrl_map_window_scale").value)
+        self.map_image_topic = str(self.get_parameter("map_image_topic").value)
         self.ccrl_map_window_available = True
         self.ccrl_map_window_name = "CCRL s_map channels"
         self.ccrl_map_window_next_update = 0.0
@@ -243,6 +251,9 @@ class CcrlPolicyNode(Node):
         self.action_pub = self.create_publisher(Int32, "/rl_explore/action", 10)
         self.target_pose_pub = self.create_publisher(PoseStamped, "/rl_explore/target_pose", 10)
         self.state_ready_pub = self.create_publisher(Bool, "/rl_explore/state_ready", 10)
+        self.map_image_pub = None
+        if self.map_image_topic:
+            self.map_image_pub = self.create_publisher(Image, self.map_image_topic, 2)
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.nav_client = ActionClient(self, NavigateToPose, self.nav_action_name)
@@ -266,6 +277,8 @@ class CcrlPolicyNode(Node):
         self.get_logger().info(f"action_execution_mode={self.action_execution_mode}")
         self.get_logger().info(f"cmd_vel_topic={self.cmd_vel_topic}")
         self.get_logger().info(f"intent_topic={self.intent_topic}")
+        if self.map_image_pub is not None:
+            self.get_logger().info(f"map_image_topic={self.map_image_topic}")
         if self.action_execution_mode == "nav2":
             self.get_logger().info(f"nav_action_name={self.nav_action_name}")
         self.get_logger().info(
@@ -553,29 +566,53 @@ class CcrlPolicyNode(Node):
         return image
 
     def show_ccrl_built_map(self, force=False):
+        if not self.show_ccrl_map_window and self.map_image_pub is None:
+            return
+
+        now = self.now_seconds()
+        if not force and now < self.ccrl_map_window_next_update:
+            if self.show_ccrl_map_window and self.ccrl_map_window_available and self.ccrl_map_window_last_image is not None:
+                cv2.waitKey(1)
+            return
+
+        if self.last_s_map is None:
+            if self.show_ccrl_map_window and self.ccrl_map_window_available and self.ccrl_map_window_last_image is not None:
+                cv2.waitKey(1)
+            return
+
+        image = self.render_s_map_channels_image(self.last_s_map)
+        self.ccrl_map_window_last_image = image
+        refresh_hz = max(float(self.ccrl_map_window_refresh_hz), 0.1)
+        self.ccrl_map_window_next_update = now + 1.0 / refresh_hz
+        self.publish_map_image(image)
+
         if not self.show_ccrl_map_window or not self.ccrl_map_window_available:
             return
         try:
-            now = self.now_seconds()
-            if not force and now < self.ccrl_map_window_next_update:
-                if self.ccrl_map_window_last_image is not None:
-                    cv2.waitKey(1)
-                return
-
-            if self.last_s_map is None:
-                if self.ccrl_map_window_last_image is not None:
-                    cv2.waitKey(1)
-                return
-
-            image = self.render_s_map_channels_image(self.last_s_map)
-            self.ccrl_map_window_last_image = image
-            refresh_hz = max(float(self.ccrl_map_window_refresh_hz), 0.1)
-            self.ccrl_map_window_next_update = now + 1.0 / refresh_hz
             cv2.imshow(self.ccrl_map_window_name, image)
             cv2.waitKey(1)
         except Exception as error:
             self.ccrl_map_window_available = False
             self.get_logger().warn(f"CCRL map debug window disabled: {error}")
+
+    def publish_map_image(self, image):
+        if self.map_image_pub is None:
+            return
+        if image.ndim != 3 or image.shape[2] != 3:
+            return
+        if not image.flags["C_CONTIGUOUS"]:
+            image = image.copy()
+
+        msg = Image()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "ccrl_map"
+        msg.height = int(image.shape[0])
+        msg.width = int(image.shape[1])
+        msg.encoding = "bgr8"
+        msg.is_bigendian = False
+        msg.step = int(image.shape[1] * 3)
+        msg.data = image.tobytes()
+        self.map_image_pub.publish(msg)
 
     def lookup_robot_pose(self, target_frame, log_warning=False):
         try:

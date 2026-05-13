@@ -37,6 +37,7 @@ source install/setup.bash
 - 用于 SLAM / RViz 可视化的高分辨率激光链路。
 - 使用 Nav2 执行网络输出的离散 waypoint 动作。
 - 键盘方向和摄像头食指方向两种人意图发布方式。
+- 将摄像头采集画面和 CCRL 建图画面合并显示的两栏意图探索 GUI。
 - 项目内双击启动器，用于一键启动自主探索或人意图参与探索。
 
 ## 地图与几何约定
@@ -129,6 +130,9 @@ launchers/RL_Explore_With_Hand_Intent
 - `RL Explore Gazebo`：启动 Gazebo、Cartographer、Nav2 和 RViz。
 - `RL Explore Policy`：启动策略节点。
 - `RL Explore Hand Intent`：启动摄像头手势意图发布节点。
+- `RL Explore Intent GUI`：启动两栏 GUI，左侧显示摄像头采集画面，右侧显示 CCRL 建图画面。
+
+在手势意图模式下，原来单独弹出的摄像头窗口和 CCRL map 调试窗口会被关闭，统一由这个 GUI 显示。Gazebo、RViz、Cartographer、Nav2 和终端窗口仍然照常显示。
 
 启动器是 ELF 可执行文件，而不是 `.desktop` 或 `.sh` 文件。这样可以避免某些 Linux 桌面环境双击脚本时只把它当作文本打开。
 

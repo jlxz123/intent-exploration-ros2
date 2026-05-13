@@ -28,6 +28,7 @@ setup(
             "policy_node = rl_explore_policy.policy_node:main",
             "intent_node = rl_explore_policy.intent_node:main",
             "hand_intent_node = rl_explore_policy.hand_intent_node:main",
+            "intent_gui_node = rl_explore_policy.gui_node:main",
         ],
     },
 )

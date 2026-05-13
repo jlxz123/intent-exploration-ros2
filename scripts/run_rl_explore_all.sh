@@ -73,22 +73,26 @@ fi
 GAZEBO_SCRIPT="${WORKSPACE}/scripts/run_rl_explore_gazebo.sh"
 POLICY_SCRIPT="${WORKSPACE}/scripts/run_rl_explore_policy.sh"
 HAND_INTENT_SCRIPT="${WORKSPACE}/scripts/run_rl_explore_hand_intent.sh"
+INTENT_GUI_SCRIPT="${WORKSPACE}/scripts/run_rl_explore_intent_gui.sh"
 
 [[ -x "${GAZEBO_SCRIPT}" ]] || { echo "[rl_explore] Missing executable: ${GAZEBO_SCRIPT}" >&2; exit 1; }
 [[ -x "${POLICY_SCRIPT}" ]] || { echo "[rl_explore] Missing executable: ${POLICY_SCRIPT}" >&2; exit 1; }
 if [[ "${WITH_HAND_INTENT}" == "1" ]]; then
     [[ -x "${HAND_INTENT_SCRIPT}" ]] || { echo "[rl_explore] Missing executable: ${HAND_INTENT_SCRIPT}" >&2; exit 1; }
+    [[ -x "${INTENT_GUI_SCRIPT}" ]] || { echo "[rl_explore] Missing executable: ${INTENT_GUI_SCRIPT}" >&2; exit 1; }
 fi
 
 open_terminal() {
     local title="$1"
     local script_path="$2"
+    local extra_env="${3:-}"
     local quoted_map
     local quoted_device
     local quoted_delay
     local quoted_spawn_base_seed
     local quoted_spawn_eval_index
     local quoted_script
+    local command_env
     local command_text
 
     printf -v quoted_map "%q" "${MAP_NAME}"
@@ -98,7 +102,11 @@ open_terminal() {
     printf -v quoted_spawn_eval_index "%q" "${SPAWN_EVAL_INDEX}"
     printf -v quoted_script "%q" "${script_path}"
 
-    command_text="env RL_EXPLORE_MAP_NAME=${quoted_map} RL_EXPLORE_DEVICE=${quoted_device} RL_EXPLORE_POLICY_DELAY=${quoted_delay} RL_EXPLORE_SPAWN_BASE_SEED=${quoted_spawn_base_seed} RL_EXPLORE_SPAWN_EVAL_INDEX=${quoted_spawn_eval_index} ${quoted_script}; status=\$?; echo; echo \"[rl_explore] ${title} exited with status \$status\"; exec bash --noprofile --norc"
+    command_env="RL_EXPLORE_MAP_NAME=${quoted_map} RL_EXPLORE_DEVICE=${quoted_device} RL_EXPLORE_POLICY_DELAY=${quoted_delay} RL_EXPLORE_SPAWN_BASE_SEED=${quoted_spawn_base_seed} RL_EXPLORE_SPAWN_EVAL_INDEX=${quoted_spawn_eval_index}"
+    if [[ -n "${extra_env}" ]]; then
+        command_env="${command_env} ${extra_env}"
+    fi
+    command_text="env ${command_env} ${quoted_script}; status=\$?; echo; echo \"[rl_explore] ${title} exited with status \$status\"; exec bash --noprofile --norc"
 
     if [[ "${DRY_RUN}" == "1" ]]; then
         echo "---- ${title} ----"
@@ -123,7 +131,10 @@ open_terminal() {
 
 echo "[rl_explore] Launching map=${MAP_NAME}, device=${DEVICE}, policy_delay=${POLICY_DELAY}s, spawn_base_seed=${SPAWN_BASE_SEED}, spawn_eval_index=${SPAWN_EVAL_INDEX}, hand_intent=${WITH_HAND_INTENT}"
 open_terminal "RL Explore Gazebo" "${GAZEBO_SCRIPT}"
-open_terminal "RL Explore Policy" "${POLICY_SCRIPT}"
 if [[ "${WITH_HAND_INTENT}" == "1" ]]; then
-    open_terminal "RL Explore Hand Intent" "${HAND_INTENT_SCRIPT}"
+    open_terminal "RL Explore Policy" "${POLICY_SCRIPT}" "RL_EXPLORE_SHOW_CCRL_MAP_WINDOW=false"
+    open_terminal "RL Explore Hand Intent" "${HAND_INTENT_SCRIPT}" "RL_EXPLORE_HAND_SHOW_WINDOW=false RL_EXPLORE_HAND_GUI_IMAGE_TOPIC=/rl_explore/gui/camera_image"
+    open_terminal "RL Explore Intent GUI" "${INTENT_GUI_SCRIPT}"
+else
+    open_terminal "RL Explore Policy" "${POLICY_SCRIPT}"
 fi

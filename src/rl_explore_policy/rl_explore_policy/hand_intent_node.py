@@ -5,6 +5,7 @@ import time
 
 import rclpy
 from rclpy.node import Node
+from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
 
 
@@ -63,6 +64,7 @@ class HandIntentNode(Node):
         self.declare_parameter("model_path", DEFAULT_MODEL_PATH)
         self.declare_parameter("mirror_image", True)
         self.declare_parameter("show_window", True)
+        self.declare_parameter("image_topic", "")
         self.declare_parameter("window_name", "RL Explore Hand Intent")
         self.declare_parameter("buffer_size", 5)
         self.declare_parameter("cooldown_ms", 1000.0)
@@ -76,6 +78,7 @@ class HandIntentNode(Node):
         self.model_path = Path(str(self.get_parameter("model_path").value)).expanduser()
         self.mirror_image = parameter_to_bool(self.get_parameter("mirror_image").value)
         self.show_window = parameter_to_bool(self.get_parameter("show_window").value)
+        self.image_topic = str(self.get_parameter("image_topic").value)
         self.window_name = str(self.get_parameter("window_name").value)
         self.buffer_size = max(1, int(self.get_parameter("buffer_size").value))
         self.cooldown_ms = float(self.get_parameter("cooldown_ms").value)
@@ -85,6 +88,9 @@ class HandIntentNode(Node):
         self.min_tracking_confidence = float(self.get_parameter("min_tracking_confidence").value)
 
         self.publisher = self.create_publisher(Int32, self.intent_topic, 10)
+        self.image_publisher = None
+        if self.image_topic:
+            self.image_publisher = self.create_publisher(Image, self.image_topic, 2)
         self.direction_buffer = deque(maxlen=self.buffer_size)
         self.last_command_time_ms = 0.0
         self.previous_wrist = None
@@ -92,6 +98,8 @@ class HandIntentNode(Node):
 
         self.get_logger().info(f"Hand intent topic: {self.intent_topic}")
         self.get_logger().info(f"Hand landmarker model: {self.model_path}")
+        if self.image_publisher is not None:
+            self.get_logger().info(f"Hand camera image topic: {self.image_topic}")
 
     def run(self):
         runtime = self.load_runtime_dependencies()
@@ -143,6 +151,8 @@ class HandIntentNode(Node):
                         self.update_stability_and_publish(direction_index, direction_name, hand_landmarks)
                         self.draw_debug_overlay(cv2, frame, hand_landmarks, direction_name)
 
+                    self.publish_camera_image(frame)
+
                     if self.show_window:
                         cv2.imshow(self.window_name, frame)
                         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -165,6 +175,25 @@ class HandIntentNode(Node):
             )
             return None
         return cv2, mp, mp_python, vision
+
+    def publish_camera_image(self, frame):
+        if self.image_publisher is None:
+            return
+        if frame.ndim != 3 or frame.shape[2] != 3:
+            return
+        if not frame.flags["C_CONTIGUOUS"]:
+            frame = frame.copy()
+
+        msg = Image()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "hand_camera"
+        msg.height = int(frame.shape[0])
+        msg.width = int(frame.shape[1])
+        msg.encoding = "bgr8"
+        msg.is_bigendian = False
+        msg.step = int(frame.shape[1] * 3)
+        msg.data = frame.tobytes()
+        self.image_publisher.publish(msg)
 
     def detect_direction(self, cv2, mp, detector, frame):
         rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

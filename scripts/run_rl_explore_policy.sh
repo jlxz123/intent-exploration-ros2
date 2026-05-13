@@ -9,6 +9,8 @@ MAP_NAME="${RL_EXPLORE_MAP_NAME:-train_map_l1}"
 POLICY_DELAY="${RL_EXPLORE_POLICY_DELAY:-12}"
 SPAWN_BASE_SEED="${RL_EXPLORE_SPAWN_BASE_SEED:-1}"
 SPAWN_EVAL_INDEX="${RL_EXPLORE_SPAWN_EVAL_INDEX:-0}"
+SHOW_CCRL_MAP_WINDOW="${RL_EXPLORE_SHOW_CCRL_MAP_WINDOW:-true}"
+MAP_IMAGE_TOPIC="${RL_EXPLORE_MAP_IMAGE_TOPIC:-/rl_explore/gui/map_image}"
 
 cd "${RL_EXPLORE_WORKSPACE}"
 
@@ -37,4 +39,12 @@ echo "[rl_explore] device=${DEVICE}"
 echo "[rl_explore] world_name=${MAP_NAME}"
 echo "[rl_explore] spawn_base_seed=${SPAWN_BASE_SEED}"
 echo "[rl_explore] spawn_eval_index=${SPAWN_EVAL_INDEX}"
-exec ros2 launch rl_explore_policy rl_explore_policy.launch.py device:="${DEVICE}" world_name:="${MAP_NAME}" spawn_base_seed:="${SPAWN_BASE_SEED}" spawn_eval_index:="${SPAWN_EVAL_INDEX}"
+echo "[rl_explore] show_ccrl_map_window=${SHOW_CCRL_MAP_WINDOW}"
+echo "[rl_explore] map_image_topic=${MAP_IMAGE_TOPIC}"
+exec ros2 launch rl_explore_policy rl_explore_policy.launch.py \
+  device:="${DEVICE}" \
+  world_name:="${MAP_NAME}" \
+  spawn_base_seed:="${SPAWN_BASE_SEED}" \
+  spawn_eval_index:="${SPAWN_EVAL_INDEX}" \
+  show_ccrl_map_window:="${SHOW_CCRL_MAP_WINDOW}" \
+  map_image_topic:="${MAP_IMAGE_TOPIC}"
